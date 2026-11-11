@@ -1,0 +1,34 @@
+name: deps
+
+on:
+  pull_request:
+  push:
+    branches: [main]
+
+permissions:
+  contents: read
+
+jobs:
+  deps:
+    name: deps
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: astral-sh/setup-uv@v5
+        with:
+          enable-cache: true
+
+      - name: Dependency gate (PyPI existence + age)
+        run: python3 tools/deps-gate.py
+
+      - name: uv lock is current
+        run: |
+          uv lock --check
+          uv export --format requirements-txt --hashes | head -n 8
+
+      - name: OSV-Scanner
+        run: |
+          curl -sSfL -o osv-scanner https://github.com/google/osv-scanner/releases/download/v2.2.3/osv-scanner_linux_amd64
+          chmod +x osv-scanner
+          ./osv-scanner scan source -r .
